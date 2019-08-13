@@ -1,0 +1,3 @@
+All the codes required to run the experiment are in this folder.
+
+NOTE: The SentEval and data folders are empty and required to be filled with the respective files in each for running the scripts on local.
