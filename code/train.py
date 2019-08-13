@@ -60,16 +60,16 @@ def prepare_training():
     train_batch_loader = SNLIBatchGenerator(train_iter)
     dev_batch_loader = SNLIBatchGenerator(dev_iter)
 
-    return train_batch_loader, dev_batch_loader, TEXT
+    return train_batch_loader, dev_batch_loader, TEXT, LABEL
 
 
 
-def eval_network():
+def eval_network(model):
     eval_acc = 0
     model.eval()
     with torch.no_grad():
         for iters, (premise, hyp, label) in enumerate(dev_batch_loader):
-            out = model(premise[0], premise[1], hypothesis[0], hypothesis[1])
+            out = model(premise[0], premise[1], hyp[0], hyp[1])
             preds = torch.argmax(out, dim=1)
             accuracy = torch.sum(preds == label, dtype=torch.float32) / out.shape[0]
             eval_acc += accuracy
@@ -78,7 +78,7 @@ def eval_network():
 
 
 
-def print_stats():
+def print_stats(epoch, train_loss, train_acc, val_acc, start):
     end = time.time()
     hours, rem = divmod(end-start, 3600)
     time_hours, time_rem = divmod(end, 3600)
@@ -123,6 +123,7 @@ def train_network():
     for epoch in range(start_epoch, config['max_epoch']+1):
         train_loss = 0
         train_acc = 0
+        TP, FP, TN, FN = 0, 0, 0, 0
         model.train()
         for iters, (premise, hyp, label) in enumerate(train_batch_loader):
             out = model(premise[0], premise[1], hyp[0], hyp[1])
@@ -141,10 +142,10 @@ def train_network():
         train_acc = train_acc/iters
 
         # Evaluate on test set
-        val_acc = eval_network()
+        val_acc = eval_network(model)
 
         # print stats
-        print_stats()
+        print_stats(epoch, train_loss, train_acc, val_acc, start)
 
         # write stats to tensorboard
         TP += ((preds == label).float() * (preds == 1).float()).sum(dim=(0,1)).cpu().data.numpy()
@@ -182,7 +183,7 @@ def train_network():
 
         # If validation accuracy does not improve, divide the learning rate by 5 and
         # if learning rate falls below 1e-5 terminate training
-        if val_accuracy <= prev_val_accuracy:
+        if val_acc <= prev_val_acc:
             for param_group in optimizer.param_groups:
                 if param_group['lr'] < 1e-5:
                     terminate_training = True
@@ -190,7 +191,7 @@ def train_network():
                 param_group['lr'] /= 5
                 print("Learning rate changed to :  ", param_group['lr'])
 
-        prev_val_accuracy = val_accuracy
+        prev_val_acc = val_acc
         if terminate_training:
             break
 
@@ -270,7 +271,7 @@ if __name__ == '__main__':
     # Prepare the tensorboard writer
     writer = SummaryWriter(os.path.join('logs', config['model_name']))
 
-    train_batch_loader, dev_batch_loader, TEXT = prepare_training()
+    train_batch_loader, dev_batch_loader, TEXT, LABEL = prepare_training()
     #Print args
     print("\nRunning training with the following parameters: \n" + "-"*50 + "\n")
     for key, value in config.items():
