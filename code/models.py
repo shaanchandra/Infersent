@@ -175,18 +175,21 @@ class SNLI(nn.Module):
             self.embedding.weight.data.copy_(pretrained_vectors)
         self.embedding.requires_grad = False
         self.fc_dim = config['fc_dim']
-        self.lstm_dim = config['lstm_dim']
         self.num_classes = config['n_classes']
 
 
         if config['model_name'] == 'base':
             self.encoder = Baseline()
+            self.lstm_dim = config['embed_dim']
         elif config['model_name'] == 'lstm':
             self.encoder = LSTM(self.embed_dim, self.lstm_dim)
+            self.lstm_dim = config['lstm_dim']
         elif config['model_name'] == 'bilstm':
             self.encoder = BiLSTM(self.embed_dim, self.lstm_dim)
+            self.lstm_dim = 2*config['lstm_dim']
         elif config['model_name'] == 'bilstm_pool':
             self.encoder = BiLSTM(self.embed_dim, self.lstm_dim, bi = True)
+            self.lstm_dim = 2*config['lstm_dim']
         else:
             raise ValueError("[!] ERROR: The encoder name is not correct! Please choose one of base/lstm/bilst/bilstm_pool")
 

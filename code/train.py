@@ -220,7 +220,7 @@ if __name__ == '__main__':
                        help = 'saved model name')
 
     # Training Params
-    parser.add_argument('--model_name', type = str, default = 'lstm',
+    parser.add_argument('--model_name', type = str, default = 'base',
                           help='model name: base / lstm / bilstm / lstm')
     parser.add_argument('--lr', type = float, default = 0.1,
                           help='Learning rate for training')
