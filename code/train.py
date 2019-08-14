@@ -132,7 +132,6 @@ def train_network():
     best_val_acc = 0
     prev_val_acc = 0
     terminate_training = False
-
     print("\nStarting time of training:  {} \n".format(datetime.datetime.now()))
     for epoch in range(start_epoch, config['max_epoch']+1):
         train_loss = 0
@@ -151,6 +150,15 @@ def train_network():
             accuracy = torch.sum(preds == label, dtype=torch.float32) / out.shape[0]
             train_loss += loss.detach().item()
             train_acc += accuracy
+
+            writer.add_scalar('Train/loss_iters', train_loss/(iters+1), ((iters+1)*(epoch+1)))
+            writer.add_scalar('Train/acc_iters', train_acc/(iters+1), ((iters+1)*(epoch+1)))
+            for name, param in model.named_parameters():
+                if not param.requires_grad:
+                    continue
+                writer.add_histogram('iters/'+name, param.data.view(-1), global_step= ((iters+1)*(epoch+1)))
+
+
 
         train_loss = train_loss/iters
         train_acc = train_acc/iters*100
@@ -171,16 +179,16 @@ def train_network():
         # recall_per_label = TP / (TP + FN + 1e-10)
         # f1_per_label = 2 * precision_per_label * recall_per_label / (1e-5 + precision_per_label + recall_per_label)
 
-        writer.add_scalar('Train/loss', train_loss, epoch)
-        writer.add_scalar('Train/acc', train_acc, epoch)
-        writer.add_scalar('Validation/acc', val_acc, epoch)
+        writer.add_scalar('Train/loss_epochs', train_loss, epoch+1)
+        writer.add_scalar('Train/acc_epochs', train_acc, epoch+1)
+        writer.add_scalar('Validation/acc', val_acc, epoch+1)
         # writer.add_scalar("precision", precision_per_label, epoch)
         # writer.add_scalar("recall", recall_per_label, epoch)
         # writer.add_scalar("f1", f1_per_label, epoch)
         for name, param in model.named_parameters():
             if not param.requires_grad:
                 continue
-            writer.add_histogram(name, param.data.view(-1), global_step=epoch)
+            writer.add_histogram('epochs/' + name, param.data.view(-1), global_step=epoch+1)
 
         # Save model checkpoints for best model
         if val_acc > best_val_acc:
@@ -298,9 +306,9 @@ if __name__ == '__main__':
     train_batch_loader, dev_batch_loader, test_batch_loader, TEXT, LABEL = prepare_training()
 
     #Print args
-    print("\nRunning training with the following parameters: \n" + "-"*50 + "\n")
+    print("\n" + "x"*50 + "\n\nRunning training with the following parameters: \n")
     for key, value in config.items():
         print(key + ' : ' + str(value))
-
+    print("\n" + "x"*50)
     train_network()
 
