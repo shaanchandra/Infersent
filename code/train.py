@@ -131,6 +131,7 @@ def train_network():
     start = time.time()
     best_val_acc = 0
     prev_val_acc = 0
+    total_iters = 0
     terminate_training = False
     print("\nStarting time of training:  {} \n".format(datetime.datetime.now()))
     for epoch in range(start_epoch, config['max_epoch']+1):
@@ -150,18 +151,17 @@ def train_network():
             accuracy = torch.sum(preds == label, dtype=torch.float32) / out.shape[0]
             train_loss += loss.detach().item()
             train_acc += accuracy
+            if iters%500 == 0:
+                writer.add_scalar('Train/iters/loss', train_loss/(iters+1), ((iters+1)+ total_iters))
+                writer.add_scalar('Train/iters/accuracy', train_acc/(iters+1)*100, ((iters+1)+ total_iters))
+                for name, param in model.named_parameters():
+                    if not param.requires_grad:
+                        continue
+                    writer.add_histogram('iters/'+name, param.data.view(-1), global_step= ((iters+1)+total_iters))
 
-            writer.add_scalar('Train/loss_iters', train_loss/(iters+1), ((iters+1)*(epoch+1)))
-            writer.add_scalar('Train/acc_iters', train_acc/(iters+1), ((iters+1)*(epoch+1)))
-            for name, param in model.named_parameters():
-                if not param.requires_grad:
-                    continue
-                writer.add_histogram('iters/'+name, param.data.view(-1), global_step= ((iters+1)*(epoch+1)))
-
-
-
+        total_iters += iters
         train_loss = train_loss/iters
-        train_acc = train_acc/iters*100
+        train_acc = (train_acc/iters)*100
 
         # Evaluate on test set
         val_acc = eval_network(model)*100
@@ -179,8 +179,8 @@ def train_network():
         # recall_per_label = TP / (TP + FN + 1e-10)
         # f1_per_label = 2 * precision_per_label * recall_per_label / (1e-5 + precision_per_label + recall_per_label)
 
-        writer.add_scalar('Train/loss_epochs', train_loss, epoch+1)
-        writer.add_scalar('Train/acc_epochs', train_acc, epoch+1)
+        writer.add_scalar('Train/epochs/loss', train_loss, epoch+1)
+        writer.add_scalar('Train/epochs/accuracy', train_acc, epoch+1)
         writer.add_scalar('Validation/acc', val_acc, epoch+1)
         # writer.add_scalar("precision", precision_per_label, epoch)
         # writer.add_scalar("recall", recall_per_label, epoch)
@@ -188,7 +188,7 @@ def train_network():
         for name, param in model.named_parameters():
             if not param.requires_grad:
                 continue
-            writer.add_histogram('epochs/' + name, param.data.view(-1), global_step=epoch+1)
+            writer.add_histogram('epochs/' + name, param.data.view(-1), global_step= epoch+1)
 
         # Save model checkpoints for best model
         if val_acc > best_val_acc:
