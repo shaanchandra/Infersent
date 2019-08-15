@@ -1,10 +1,7 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import argparse, time, datetime
 import pprint
 import os
+# os.environ['CUDA_VISIBLE_DEVICES'] = '1'
 import sys
 import time
 import argparse
@@ -13,7 +10,6 @@ import numpy as np
 
 import torch
 import torchtext
-# from tensorboardX import SummaryWriter
 from torch.utils.tensorboard import SummaryWriter
 from nltk import word_tokenize
 import nltk
@@ -25,7 +21,6 @@ import torch.nn as nn
 
 from data import get_nli, build_vocab, get_batch_from_idx, SNLIBatchGenerator
 from models import SNLI
-from dev_test_evals import model_eval
 
 
 
@@ -117,23 +112,27 @@ def train_network():
     criterion = nn.CrossEntropyLoss()
 
     # Load the checkpoint to resume training if found
-    model_file = os.path.join(config['checkpoint_path'], config['outputmodelname'])
+    model_file = os.path.join(config['checkpoint_path'], config['model_name'], config['outputmodelname'])
     if os.path.isfile(model_file):
         checkpoint = torch.load(model_file)
         model.load_state_dict(checkpoint['model_state_dict'])
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         start_epoch = checkpoint['epoch'] + 1
-        print("\nResuming training from epoch %d with loaded model and optimizer..." % start_epoch)
+        print("\nResuming training from epoch {} with loaded model and optimizer...\n".format(start_epoch))
+        print("Using the model defined below: \n\n")
+        print(model)
     else:
         start_epoch = 1
-        print("\nNo Checkpoints found for the chosen model to reusme training... \nTraining the  ''{}''  model from scratch...".format(config['model_name']))
+        print("\nNo Checkpoints found for the chosen model to reusme training... \nTraining the  ''{}''  model from scratch...\n".format(config['model_name']))
+        print("Using the model defined below: \n\n")
+        print(model)
 
     start = time.time()
     best_val_acc = 0
     prev_val_acc = 0
     total_iters = 0
     terminate_training = False
-    print("\nStarting time of training:  {} \n".format(datetime.datetime.now()))
+    print("\nBeginning training at:  {} \n".format(datetime.datetime.now()))
     for epoch in range(start_epoch, config['max_epoch']+1):
         train_loss = 0
         train_acc = 0
@@ -179,20 +178,20 @@ def train_network():
         # recall_per_label = TP / (TP + FN + 1e-10)
         # f1_per_label = 2 * precision_per_label * recall_per_label / (1e-5 + precision_per_label + recall_per_label)
 
-        writer.add_scalar('Train/epochs/loss', train_loss, epoch+1)
-        writer.add_scalar('Train/epochs/accuracy', train_acc, epoch+1)
-        writer.add_scalar('Validation/acc', val_acc, epoch+1)
+        writer.add_scalar('Train/epochs/loss', train_loss, epoch)
+        writer.add_scalar('Train/epochs/accuracy', train_acc, epoch)
+        writer.add_scalar('Validation/acc', val_acc, epoch)
         # writer.add_scalar("precision", precision_per_label, epoch)
         # writer.add_scalar("recall", recall_per_label, epoch)
         # writer.add_scalar("f1", f1_per_label, epoch)
         for name, param in model.named_parameters():
             if not param.requires_grad:
                 continue
-            writer.add_histogram('epochs/' + name, param.data.view(-1), global_step= epoch+1)
+            writer.add_histogram('epochs/' + name, param.data.view(-1), global_step= epoch)
 
         # Save model checkpoints for best model
         if val_acc > best_val_acc:
-            print("\nNew High Score! Saving model...")
+            print("New High Score! Saving model...\n")
             best_val_acc = val_acc
             # Save the state and the vocabulary
             torch.save({
@@ -201,7 +200,7 @@ def train_network():
                 'optimizer_state_dict': optimizer.state_dict(),
                 'text_vocab': TEXT.vocab.stoi,
                 'label_vocab': LABEL.vocab.stoi
-            }, os.path.join(config['checkpoint_path'], config['outputmodelname']))
+            }, os.path.join(config['checkpoint_path'], config['model_name'], config['outputmodelname']))
 
         # If validation accuracy does not improve, divide the learning rate by 5 and
         # if learning rate falls below 1e-5 terminate training
@@ -211,7 +210,7 @@ def train_network():
                     terminate_training = True
                     break
                 param_group['lr'] /= 5
-                print("Learning rate changed to :  ", param_group['lr'])
+                print("Learning rate changed to :  {}\n".format(param_group['lr']))
 
         prev_val_acc = val_acc
         if terminate_training:
@@ -224,7 +223,7 @@ def train_network():
         print("\n" + "-"*100 + "\nMaximum epochs reached. Finished training !!")
 
     print("\n" + "-"*50 + "\n\t\t\tEvaluating on test set\n" + "-"*50)
-    model_file = os.path.join(config['checkpoint_path'], config['outputmodelname'])
+    model_file = os.path.join(config['checkpoint_path'], config['model_name'], config['outputmodelname'])
     if os.path.isfile(model_file):
         checkpoint = torch.load(model_file)
         model.load_state_dict(checkpoint['model_state_dict'])
@@ -288,13 +287,14 @@ if __name__ == '__main__':
     dtype = torch.FloatTensor
 
     # Check all provided paths:
+    model_path = os.path.join(config['checkpoint_path'], config['model_name'])
     if not os.path.exists(config['nli_path']):
         raise ValueError("[!] ERROR: NLI data path does not exist")
     if not os.path.exists(config['glove_path']):
         raise ValueError("[!] ERROR: Glove Embeddings path does not exist")
-    if not os.path.exists(config['checkpoint_path']):
-        print("\nCreating checkpoint path for output videos:  ", config['checkpoint_path'])
-        os.makedirs(config['checkpoint_path'])
+    if not os.path.exists(model_path):
+        print("\nCreating checkpoint path for saved models at:  {}\n".format(model_path))
+        os.makedirs(model_path)
     if config['model_name'] not in ['base', 'lstm', 'bilstm' , 'bilstm_pool']:
         raise ValueError("{!} ERROR:  model_name is incorrect. Choose one of base/lstm/bilstm/bilstm_pool")
 
