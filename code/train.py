@@ -222,7 +222,7 @@ def train_network():
     else:
         print("\n" + "-"*100 + "\nMaximum epochs reached. Finished training !!")
 
-    print("\n" + "-"*50 + "\n\t\t\tEvaluating on test set\n" + "-"*50)
+    print("\n" + "-"*50 + "\n\t\tEvaluating on test set\n" + "-"*50)
     model_file = os.path.join(config['checkpoint_path'], config['model_name'], config['outputmodelname'])
     if os.path.isfile(model_file):
         checkpoint = torch.load(model_file)
@@ -230,7 +230,7 @@ def train_network():
     else:
         raise ValueError("\nNo Saved model state_dict found for the chosen model...!!! \nAborting evaluation on test set...".format(config['model_name']))
     test_acc = eval_network(model, test = True)*100
-    print("\n" + "="*50 + "Test accuracy of best model = {:.2f}%".format(test_acc))
+    print("\nTest accuracy of best model = {:.2f}%".format(test_acc))
 
     writer.close()
     return None
@@ -251,7 +251,7 @@ if __name__ == '__main__':
                        help = 'saved model name')
 
     # Training Params
-    parser.add_argument('--model_name', type = str, default = 'base',
+    parser.add_argument('--model_name', type = str, default = 'bilstm',
                           help='model name: base / lstm / bilstm / lstm')
     parser.add_argument('--lr', type = float, default = 0.1,
                           help='Learning rate for training')
