@@ -102,6 +102,10 @@ They are exactly the same files but in different interfaces. *infer.py* accepts 
 
 This returns model output (as the weight outputs of 3 classes at the final classifier layer) to give an idea of relative weight given to each choice along with the model's prediction as *entailment, neutral, contradiction*.
 
+## Results
+
+[Results and Analysis](https://github.com/shaanchandra/Infersent/blob/master/SMNLS_Practical1_ShantanuChandra.pdf)
+
 
 
 
